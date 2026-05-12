@@ -1,12 +1,9 @@
-﻿using System;
-using System.IO.Ports;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.IO.Ports;
 using Dreamine.Communication.Abstractions.Enums;
 using Dreamine.Communication.Abstractions.Interfaces;
 using Dreamine.Communication.Abstractions.Models;
 using Dreamine.Communication.Core.Framing;
-using Dreamine.Communication.Core.Serialization;
+using Dreamine.Communication.Core.Protocols;
 using Dreamine.Communication.Serial.Options;
 using Dreamine.Communication.Serial.Streams;
 
@@ -18,7 +15,7 @@ namespace Dreamine.Communication.Serial.Ports;
 public sealed class SerialPortTransport : IMessageTransport
 {
     private readonly SerialPortTransportOptions _options;
-    private readonly IMessageSerializer _serializer;
+    private readonly IMessageProtocolAdapter _protocolAdapter;
     private readonly IMessageFrameCodec _frameCodec;
 
     private SerialPort? _serialPort;
@@ -31,7 +28,10 @@ public sealed class SerialPortTransport : IMessageTransport
     /// </summary>
     /// <param name="options">시리얼 포트 설정입니다.</param>
     public SerialPortTransport(SerialPortTransportOptions options)
-        : this(options, new JsonMessageSerializer(), new LengthPrefixedMessageFrameCodec())
+        : this(
+            options,
+            new DreamineEnvelopeProtocolAdapter(),
+            new LengthPrefixedMessageFrameCodec())
     {
     }
 
@@ -39,15 +39,15 @@ public sealed class SerialPortTransport : IMessageTransport
     /// \brief SerialPortTransport 클래스의 새 인스턴스를 초기화합니다.
     /// </summary>
     /// <param name="options">시리얼 포트 설정입니다.</param>
-    /// <param name="serializer">메시지 직렬화기입니다.</param>
+    /// <param name="protocolAdapter">메시지 프로토콜 어댑터입니다.</param>
     /// <param name="frameCodec">메시지 프레임 코덱입니다.</param>
     public SerialPortTransport(
         SerialPortTransportOptions options,
-        IMessageSerializer serializer,
+        IMessageProtocolAdapter protocolAdapter,
         IMessageFrameCodec frameCodec)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
-        _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
+        _protocolAdapter = protocolAdapter ?? throw new ArgumentNullException(nameof(protocolAdapter));
         _frameCodec = frameCodec ?? throw new ArgumentNullException(nameof(frameCodec));
 
         ValidateOptions(_options);
@@ -74,12 +74,13 @@ public sealed class SerialPortTransport : IMessageTransport
     /// <param name="cancellationToken">취소 토큰입니다.</param>
     public Task ConnectAsync(CancellationToken cancellationToken = default)
     {
-        if (State == ConnectionState.Connected || State == ConnectionState.Connecting)
+        if (State is ConnectionState.Connected or ConnectionState.Connecting)
         {
             return Task.CompletedTask;
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+
         State = ConnectionState.Connecting;
 
         try
@@ -113,9 +114,11 @@ public sealed class SerialPortTransport : IMessageTransport
         catch
         {
             State = ConnectionState.Faulted;
+
             _serialPort?.Dispose();
             _serialPort = null;
             _streamAdapter = null;
+
             throw;
         }
     }
@@ -162,6 +165,12 @@ public sealed class SerialPortTransport : IMessageTransport
             catch (ObjectDisposedException)
             {
             }
+            catch (InvalidOperationException)
+            {
+            }
+            catch (IOException)
+            {
+            }
         }
 
         _receiveLoopCts?.Dispose();
@@ -171,6 +180,7 @@ public sealed class SerialPortTransport : IMessageTransport
         _streamAdapter = null;
 
         cancellationToken.ThrowIfCancellationRequested();
+
         State = ConnectionState.Disconnected;
     }
 
@@ -193,12 +203,13 @@ public sealed class SerialPortTransport : IMessageTransport
             throw new InvalidOperationException("Serial port is not connected.");
         }
 
-        var payload = _serializer.Serialize(message);
+        var payload = _protocolAdapter.Encode(message);
 
         await _frameCodec.WriteFrameAsync(
-            _streamAdapter.BaseStream,
-            payload,
-            cancellationToken).ConfigureAwait(false);
+                _streamAdapter.BaseStream,
+                payload,
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -222,16 +233,23 @@ public sealed class SerialPortTransport : IMessageTransport
                    State == ConnectionState.Connected)
             {
                 var payload = await _frameCodec.ReadFrameAsync(
-                    _streamAdapter.BaseStream,
-                    cancellationToken).ConfigureAwait(false);
+                        _streamAdapter.BaseStream,
+                        cancellationToken)
+                    .ConfigureAwait(false);
 
                 if (payload is null)
                 {
                     break;
                 }
 
-                var message = _serializer.Deserialize(payload);
+                var message = _protocolAdapter.Decode(payload);
                 MessageReceived?.Invoke(this, message);
+            }
+
+            if (!cancellationToken.IsCancellationRequested &&
+                State == ConnectionState.Connected)
+            {
+                State = ConnectionState.Disconnected;
             }
         }
         catch (OperationCanceledException)
@@ -240,9 +258,27 @@ public sealed class SerialPortTransport : IMessageTransport
         catch (ObjectDisposedException)
         {
         }
+        catch (InvalidOperationException)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                State = ConnectionState.Faulted;
+            }
+        }
+        catch (IOException)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                State = ConnectionState.Faulted;
+            }
+        }
         catch
         {
-            State = ConnectionState.Faulted;
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                State = ConnectionState.Faulted;
+            }
+
             throw;
         }
     }
