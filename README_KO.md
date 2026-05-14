@@ -4,7 +4,7 @@
 
 이 패키지는 RS232 및 `SerialPort` 기반 전송 구현체를 제공하며, 시리얼 장비 관련 책임을 상위 애플리케이션 계층과 분리합니다.
 
-[➡️ English Version](README.md)
+[➡️ English Version](./README.md)
 
 ## 설명
 
@@ -274,21 +274,6 @@ net8.0
 - `Dreamine.Communication.RabbitMQ`
 - `Dreamine.Communication.FullKit`
 - `Dreamine.Communication.Wpf`
-
-## 문서 점검 메모
-
-기존 README는 패키지 역할, 의존성, 대상 프레임워크, 기본 기능 요약은 포함하고 있었습니다. 부족하거나 약했던 부분은 다음 항목입니다.
-
-- `SerialPortTransport` 생성자 기본 동작
-- `SerialPortTransportOptions` 필드별 설명
-- 프로토콜 어댑터와 프레임 코덱의 책임 분리
-- 권장 시리얼 프로토콜 조합
-- 시리얼 통신에서 `RawAvailableMessageFrameCodec`을 사용하는 방법
-- 시리얼 스트림 경계 주의사항
-- 연결 상태 및 오류 처리 동작
-- 실제 사용 예시
-
-위 항목을 보강했습니다.
 
 ## 라이선스
 

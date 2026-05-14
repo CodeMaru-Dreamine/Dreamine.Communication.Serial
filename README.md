@@ -275,21 +275,6 @@ net8.0
 - `Dreamine.Communication.FullKit`
 - `Dreamine.Communication.Wpf`
 
-## Documentation Check Notes
-
-The previous README already covered the package role, dependency list, target framework, and broad feature summary. The missing or weakly described areas were:
-
-- `SerialPortTransport` constructor behavior
-- `SerialPortTransportOptions` field-level explanation
-- protocol adapter and frame codec responsibility split
-- recommended serial protocol combinations
-- `RawAvailableMessageFrameCodec` usage with serial communication
-- serial stream boundary warning
-- connection state and error handling behavior
-- practical usage examples
-
-These items are now included.
-
 ## License
 
 This project is licensed under the MIT License.
