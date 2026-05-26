@@ -1,4 +1,5 @@
-﻿using System.IO.Ports;
+using System.IO;
+using System.IO.Ports;
 using Dreamine.Communication.Abstractions.Enums;
 using Dreamine.Communication.Abstractions.Interfaces;
 using Dreamine.Communication.Abstractions.Models;
@@ -203,13 +204,23 @@ public sealed class SerialPortTransport : IMessageTransport
             throw new InvalidOperationException("Serial port is not connected.");
         }
 
-        var payload = _protocolAdapter.Encode(message);
+        try
+        {
+            var payload = _protocolAdapter.Encode(message);
 
-        await _frameCodec.WriteFrameAsync(
-                _streamAdapter.BaseStream,
-                payload,
-                cancellationToken)
-            .ConfigureAwait(false);
+            await _frameCodec.WriteFrameAsync(
+                    _streamAdapter.BaseStream,
+                    payload,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch
+        {
+            State = ConnectionState.Faulted;
+            CleanupSerialPort();
+
+            throw;
+        }
     }
 
     /// <summary>
@@ -277,10 +288,34 @@ public sealed class SerialPortTransport : IMessageTransport
             if (!cancellationToken.IsCancellationRequested)
             {
                 State = ConnectionState.Faulted;
+                CleanupSerialPort();
             }
-
-            throw;
         }
+    }
+
+    private void CleanupSerialPort()
+    {
+        try
+        {
+            if (_serialPort is not null && _serialPort.IsOpen)
+            {
+                _serialPort.Close();
+            }
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            _serialPort?.Dispose();
+        }
+        catch
+        {
+        }
+
+        _serialPort = null;
+        _streamAdapter = null;
     }
 
     private static void ValidateOptions(SerialPortTransportOptions options)
