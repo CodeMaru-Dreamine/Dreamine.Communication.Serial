@@ -6,12 +6,11 @@ using Dreamine.Communication.Abstractions.Models;
 using Dreamine.Communication.Core.Framing;
 using Dreamine.Communication.Core.Protocols;
 using Dreamine.Communication.Serial.Options;
-using Dreamine.Communication.Serial.Streams;
 
 namespace Dreamine.Communication.Serial.Ports;
 
 /// <summary>
-/// \brief RS232 SerialPort 기반 메시지 전송 계층입니다.
+/// RS232 SerialPort 기반 메시지 전송 계층입니다.
 /// </summary>
 public sealed class SerialPortTransport : IMessageTransport
 {
@@ -20,12 +19,12 @@ public sealed class SerialPortTransport : IMessageTransport
     private readonly IMessageFrameCodec _frameCodec;
 
     private SerialPort? _serialPort;
-    private SerialPortStreamAdapter? _streamAdapter;
     private CancellationTokenSource? _receiveLoopCts;
     private Task? _receiveLoopTask;
+    private int _state = (int)ConnectionState.Disconnected;
 
     /// <summary>
-    /// \brief SerialPortTransport 클래스의 새 인스턴스를 초기화합니다.
+    /// SerialPortTransport 클래스의 새 인스턴스를 초기화합니다.
     /// </summary>
     /// <param name="options">시리얼 포트 설정입니다.</param>
     public SerialPortTransport(SerialPortTransportOptions options)
@@ -37,7 +36,7 @@ public sealed class SerialPortTransport : IMessageTransport
     }
 
     /// <summary>
-    /// \brief SerialPortTransport 클래스의 새 인스턴스를 초기화합니다.
+    /// SerialPortTransport 클래스의 새 인스턴스를 초기화합니다.
     /// </summary>
     /// <param name="options">시리얼 포트 설정입니다.</param>
     /// <param name="protocolAdapter">메시지 프로토콜 어댑터입니다.</param>
@@ -55,22 +54,22 @@ public sealed class SerialPortTransport : IMessageTransport
     }
 
     /// <summary>
-    /// \brief 현재 연결 상태를 가져옵니다.
+    /// 현재 연결 상태를 가져옵니다.
     /// </summary>
-    public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
+    public ConnectionState State => (ConnectionState)Volatile.Read(ref _state);
 
     /// <summary>
-    /// \brief 전송 방식 종류를 가져옵니다.
+    /// 전송 방식 종류를 가져옵니다.
     /// </summary>
     public TransportKind Kind => TransportKind.Serial;
 
     /// <summary>
-    /// \brief 메시지를 수신했을 때 발생합니다.
+    /// 메시지를 수신했을 때 발생합니다.
     /// </summary>
     public event EventHandler<MessageEnvelope>? MessageReceived;
 
     /// <summary>
-    /// \brief 시리얼 포트를 엽니다.
+    /// 시리얼 포트를 엽니다. SerialPort.Open은 동기 API이므로 이 메서드는 포트 열기 구간에서 동기적으로 실행됩니다.
     /// </summary>
     /// <param name="cancellationToken">취소 토큰입니다.</param>
     public Task ConnectAsync(CancellationToken cancellationToken = default)
@@ -82,7 +81,7 @@ public sealed class SerialPortTransport : IMessageTransport
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        State = ConnectionState.Connecting;
+        SetState(ConnectionState.Connecting);
 
         try
         {
@@ -101,9 +100,8 @@ public sealed class SerialPortTransport : IMessageTransport
             };
 
             _serialPort.Open();
-            _streamAdapter = new SerialPortStreamAdapter(_serialPort);
 
-            State = ConnectionState.Connected;
+            SetState(ConnectionState.Connected);
 
             _receiveLoopCts = new CancellationTokenSource();
             _receiveLoopTask = Task.Run(
@@ -114,18 +112,17 @@ public sealed class SerialPortTransport : IMessageTransport
         }
         catch
         {
-            State = ConnectionState.Faulted;
+            SetState(ConnectionState.Faulted);
 
             _serialPort?.Dispose();
             _serialPort = null;
-            _streamAdapter = null;
 
             throw;
         }
     }
 
     /// <summary>
-    /// \brief 시리얼 포트를 닫습니다.
+    /// 시리얼 포트를 닫습니다.
     /// </summary>
     /// <param name="cancellationToken">취소 토큰입니다.</param>
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
@@ -135,7 +132,7 @@ public sealed class SerialPortTransport : IMessageTransport
             return;
         }
 
-        State = ConnectionState.Disconnecting;
+        SetState(ConnectionState.Disconnecting);
 
         _receiveLoopCts?.Cancel();
 
@@ -178,15 +175,14 @@ public sealed class SerialPortTransport : IMessageTransport
         _receiveLoopCts = null;
         _receiveLoopTask = null;
         _serialPort = null;
-        _streamAdapter = null;
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        State = ConnectionState.Disconnected;
+        SetState(ConnectionState.Disconnected);
     }
 
     /// <summary>
-    /// \brief 메시지를 시리얼 포트로 전송합니다.
+    /// 메시지를 시리얼 포트로 전송합니다.
     /// </summary>
     /// <param name="message">전송할 메시지입니다.</param>
     /// <param name="cancellationToken">취소 토큰입니다.</param>
@@ -197,7 +193,6 @@ public sealed class SerialPortTransport : IMessageTransport
         ArgumentNullException.ThrowIfNull(message);
 
         if (_serialPort is null ||
-            _streamAdapter is null ||
             !_serialPort.IsOpen ||
             State != ConnectionState.Connected)
         {
@@ -209,14 +204,14 @@ public sealed class SerialPortTransport : IMessageTransport
             var payload = _protocolAdapter.Encode(message);
 
             await _frameCodec.WriteFrameAsync(
-                    _streamAdapter.BaseStream,
+                    _serialPort.BaseStream,
                     payload,
                     cancellationToken)
                 .ConfigureAwait(false);
         }
         catch
         {
-            State = ConnectionState.Faulted;
+            SetState(ConnectionState.Faulted);
             CleanupSerialPort();
 
             throw;
@@ -224,7 +219,7 @@ public sealed class SerialPortTransport : IMessageTransport
     }
 
     /// <summary>
-    /// \brief 시리얼 포트 리소스를 비동기로 해제합니다.
+    /// 시리얼 포트 리소스를 비동기로 해제합니다.
     /// </summary>
     public async ValueTask DisposeAsync()
     {
@@ -233,7 +228,7 @@ public sealed class SerialPortTransport : IMessageTransport
 
     private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
     {
-        if (_streamAdapter is null)
+        if (_serialPort is null)
         {
             return;
         }
@@ -244,7 +239,7 @@ public sealed class SerialPortTransport : IMessageTransport
                    State == ConnectionState.Connected)
             {
                 var payload = await _frameCodec.ReadFrameAsync(
-                        _streamAdapter.BaseStream,
+                        _serialPort.BaseStream,
                         cancellationToken)
                     .ConfigureAwait(false);
 
@@ -260,7 +255,7 @@ public sealed class SerialPortTransport : IMessageTransport
             if (!cancellationToken.IsCancellationRequested &&
                 State == ConnectionState.Connected)
             {
-                State = ConnectionState.Disconnected;
+                SetState(ConnectionState.Disconnected);
             }
         }
         catch (OperationCanceledException)
@@ -273,21 +268,21 @@ public sealed class SerialPortTransport : IMessageTransport
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                State = ConnectionState.Faulted;
+                SetState(ConnectionState.Faulted);
             }
         }
         catch (IOException)
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                State = ConnectionState.Faulted;
+                SetState(ConnectionState.Faulted);
             }
         }
         catch
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                State = ConnectionState.Faulted;
+                SetState(ConnectionState.Faulted);
                 CleanupSerialPort();
             }
         }
@@ -315,7 +310,11 @@ public sealed class SerialPortTransport : IMessageTransport
         }
 
         _serialPort = null;
-        _streamAdapter = null;
+    }
+
+    private void SetState(ConnectionState state)
+    {
+        Interlocked.Exchange(ref _state, (int)state);
     }
 
     private static void ValidateOptions(SerialPortTransportOptions options)
@@ -332,12 +331,12 @@ public sealed class SerialPortTransport : IMessageTransport
             throw new ArgumentOutOfRangeException(nameof(options.DataBits));
         }
 
-        if (options.ReadTimeoutMs <= 0)
+        if (options.ReadTimeoutMs < System.IO.Ports.SerialPort.InfiniteTimeout)
         {
             throw new ArgumentOutOfRangeException(nameof(options.ReadTimeoutMs));
         }
 
-        if (options.WriteTimeoutMs <= 0)
+        if (options.WriteTimeoutMs < System.IO.Ports.SerialPort.InfiniteTimeout)
         {
             throw new ArgumentOutOfRangeException(nameof(options.WriteTimeoutMs));
         }
