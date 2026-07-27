@@ -296,7 +296,8 @@ public sealed class SerialPortTransport : IMessageTransport
 
         SetState(ConnectionState.Disconnecting);
 
-        _receiveLoopCts?.Cancel();
+        if (_receiveLoopCts is not null)
+            await _receiveLoopCts.CancelAsync().ConfigureAwait(false);
 
         if (_serialPort is not null)
         {
@@ -433,7 +434,7 @@ public sealed class SerialPortTransport : IMessageTransport
     /// </summary>
     public async ValueTask DisposeAsync()
     {
-        await DisconnectAsync().ConfigureAwait(false);
+        await DisconnectAsync(CancellationToken.None).ConfigureAwait(false);
     }
 
     /// <summary>
