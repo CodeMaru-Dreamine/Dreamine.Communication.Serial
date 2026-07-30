@@ -320,17 +320,12 @@ public sealed class SerialPortTransport : IMessageTransport
             {
                 await _receiveLoopTask.ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch (Exception ex) when (ex is OperationCanceledException
+                                       or ObjectDisposedException
+                                       or InvalidOperationException
+                                       or IOException)
             {
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (InvalidOperationException)
-            {
-            }
-            catch (IOException)
-            {
+                // The receive loop may observe the port closing while disconnect tears it down.
             }
         }
 
@@ -493,25 +488,13 @@ public sealed class SerialPortTransport : IMessageTransport
                 SetState(ConnectionState.Disconnected);
             }
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException)
         {
+            // Cancellation and disposal are expected while the receive loop is shutting down.
         }
-        catch (ObjectDisposedException)
+        catch (Exception ex) when (ex is InvalidOperationException or IOException)
         {
-        }
-        catch (InvalidOperationException)
-        {
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                SetState(ConnectionState.Faulted);
-            }
-        }
-        catch (IOException)
-        {
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                SetState(ConnectionState.Faulted);
-            }
+            SetFaultedUnlessCancelled(cancellationToken);
         }
         catch
         {
@@ -520,6 +503,14 @@ public sealed class SerialPortTransport : IMessageTransport
                 SetState(ConnectionState.Faulted);
                 CleanupSerialPort();
             }
+        }
+    }
+
+    private void SetFaultedUnlessCancelled(CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            SetState(ConnectionState.Faulted);
         }
     }
 
@@ -542,6 +533,7 @@ public sealed class SerialPortTransport : IMessageTransport
         }
         catch
         {
+            // Cleanup is best-effort; the transport is being discarded regardless.
         }
 
         try
@@ -550,6 +542,7 @@ public sealed class SerialPortTransport : IMessageTransport
         }
         catch
         {
+            // Cleanup is best-effort; disposal failure must not mask the original failure.
         }
 
         _serialPort = null;
