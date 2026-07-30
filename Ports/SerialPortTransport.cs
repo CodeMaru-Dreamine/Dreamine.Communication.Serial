@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Ports;
 using Dreamine.Communication.Abstractions.Enums;
@@ -456,6 +457,8 @@ public sealed class SerialPortTransport : IMessageTransport
     /// <para>A task representing the background receive loop.</para>
     /// \endif
     /// </returns>
+    [ExcludeFromCodeCoverage(
+        Justification = "Requires a live serial device and is exercised by hardware integration tests.")]
     private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
     {
         if (_serialPort is null)
