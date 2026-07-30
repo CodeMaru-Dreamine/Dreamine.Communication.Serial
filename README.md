@@ -1,5 +1,18 @@
 # Dreamine.Communication.Serial
 
+[![CI](https://github.com/CodeMaru-Dreamine/Dreamine.Communication.Serial/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeMaru-Dreamine/Dreamine.Communication.Serial/actions/workflows/ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=CodeMaru-Dreamine_Dreamine.Communication.Serial&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=CodeMaru-Dreamine_Dreamine.Communication.Serial)
+[![Security](https://sonarcloud.io/api/project_badges/measure?project=CodeMaru-Dreamine_Dreamine.Communication.Serial&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=CodeMaru-Dreamine_Dreamine.Communication.Serial)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=CodeMaru-Dreamine_Dreamine.Communication.Serial&metric=coverage)](https://sonarcloud.io/component_measures?id=CodeMaru-Dreamine_Dreamine.Communication.Serial&metric=coverage)
+[![License](https://img.shields.io/github/license/CodeMaru-Dreamine/Dreamine.Communication.Serial?label=license)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-8-512BD4)](https://dotnet.microsoft.com/)
+[![NuGet](https://img.shields.io/nuget/v/Dreamine.Communication.Serial?label=nuget)](https://www.nuget.org/packages/Dreamine.Communication.Serial)
+[![Downloads](https://img.shields.io/nuget/dt/Dreamine.Communication.Serial?label=downloads)](https://www.nuget.org/packages/Dreamine.Communication.Serial)
+[![Docs](https://img.shields.io/badge/Docs-dreamine.kr-2496ED)](https://dreamine.kr/)
+[![Guide](https://img.shields.io/badge/Guide-dreamine.kr-2496ED)](https://dreamine.kr/)
+[![Playground](https://img.shields.io/badge/Playground-dreamine.kr-6F42C1)](https://dreamine.kr/)
+[![Book](https://img.shields.io/badge/Book-Practical_MVVM_Architecture-black)](https://dreamine.kr/)
+
 `Dreamine.Communication.Serial` is part of the Dreamine Communication package family.
 
 This package provides RS232 and `SerialPort` based transport implementations while keeping serial-device specific logic isolated from the upper application layer.

@@ -1,5 +1,18 @@
 # Dreamine.Communication.Serial
 
+[![CI](https://github.com/CodeMaru-Dreamine/Dreamine.Communication.Serial/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeMaru-Dreamine/Dreamine.Communication.Serial/actions/workflows/ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=CodeMaru-Dreamine_Dreamine.Communication.Serial&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=CodeMaru-Dreamine_Dreamine.Communication.Serial)
+[![Security](https://sonarcloud.io/api/project_badges/measure?project=CodeMaru-Dreamine_Dreamine.Communication.Serial&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=CodeMaru-Dreamine_Dreamine.Communication.Serial)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=CodeMaru-Dreamine_Dreamine.Communication.Serial&metric=coverage)](https://sonarcloud.io/component_measures?id=CodeMaru-Dreamine_Dreamine.Communication.Serial&metric=coverage)
+[![License](https://img.shields.io/github/license/CodeMaru-Dreamine/Dreamine.Communication.Serial?label=license)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-8-512BD4)](https://dotnet.microsoft.com/)
+[![NuGet](https://img.shields.io/nuget/v/Dreamine.Communication.Serial?label=nuget)](https://www.nuget.org/packages/Dreamine.Communication.Serial)
+[![Downloads](https://img.shields.io/nuget/dt/Dreamine.Communication.Serial?label=downloads)](https://www.nuget.org/packages/Dreamine.Communication.Serial)
+[![문서](https://img.shields.io/badge/문서-dreamine.kr-2496ED)](https://dreamine.kr/)
+[![가이드](https://img.shields.io/badge/가이드-dreamine.kr-2496ED)](https://dreamine.kr/)
+[![플레이그라운드](https://img.shields.io/badge/플레이그라운드-dreamine.kr-6F42C1)](https://dreamine.kr/)
+[![도서](https://img.shields.io/badge/도서-실전_MVVM_아키텍처-black)](https://dreamine.kr/)
+
 `Dreamine.Communication.Serial`는 Dreamine Communication 계열 패키지의 일부입니다.
 
 이 패키지는 RS232 및 `SerialPort` 기반 전송 구현체를 제공하며, 시리얼 장비 관련 책임을 상위 애플리케이션 계층과 분리합니다.
