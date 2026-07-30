@@ -58,6 +58,37 @@ public sealed class SerialContractTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new SerialPortTransport(options));
     }
 
+    [Theory]
+    [InlineData("ReadTimeoutMs")]
+    [InlineData("WriteTimeoutMs")]
+    [InlineData("ReadBufferSize")]
+    [InlineData("WriteBufferSize")]
+    public void TransportRejectsInvalidRuntimeLimits(string optionName)
+    {
+        var options = new SerialPortTransportOptions();
+
+        switch (optionName)
+        {
+            case "ReadTimeoutMs":
+                options.ReadTimeoutMs = -2;
+                break;
+            case "WriteTimeoutMs":
+                options.WriteTimeoutMs = -2;
+                break;
+            case "ReadBufferSize":
+                options.ReadBufferSize = 0;
+                break;
+            case "WriteBufferSize":
+                options.WriteBufferSize = 0;
+                break;
+        }
+
+        var error = Assert.Throws<ArgumentOutOfRangeException>(
+            () => new SerialPortTransport(options));
+
+        Assert.Equal("options", error.ParamName);
+    }
+
     [Fact]
     public void SerialExceptionPreservesMessageAndInnerException()
     {
