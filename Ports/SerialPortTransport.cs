@@ -607,32 +607,50 @@ public sealed class SerialPortTransport : IMessageTransport
 
         if (options.BaudRate <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.BaudRate));
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                options.BaudRate,
+                "BaudRate must be greater than zero.");
         }
 
         if (options.DataBits is < 5 or > 8)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.DataBits));
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                options.DataBits,
+                "DataBits must be between 5 and 8.");
         }
 
         if (options.ReadTimeoutMs < System.IO.Ports.SerialPort.InfiniteTimeout)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.ReadTimeoutMs));
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                options.ReadTimeoutMs,
+                "ReadTimeoutMs must be -1 or greater.");
         }
 
         if (options.WriteTimeoutMs < System.IO.Ports.SerialPort.InfiniteTimeout)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.WriteTimeoutMs));
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                options.WriteTimeoutMs,
+                "WriteTimeoutMs must be -1 or greater.");
         }
 
         if (options.ReadBufferSize <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.ReadBufferSize));
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                options.ReadBufferSize,
+                "ReadBufferSize must be greater than zero.");
         }
 
         if (options.WriteBufferSize <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.WriteBufferSize));
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                options.WriteBufferSize,
+                "WriteBufferSize must be greater than zero.");
         }
     }
 }
