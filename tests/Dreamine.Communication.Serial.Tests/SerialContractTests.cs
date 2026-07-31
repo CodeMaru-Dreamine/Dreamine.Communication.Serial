@@ -98,4 +98,14 @@ public sealed class SerialContractTests
         Assert.Equal("serial failed", error.Message);
         Assert.Same(inner, error.InnerException);
     }
+
+    [Fact]
+    public void SerialExceptionSupportsDefaultAndMessageConstructors()
+    {
+        var defaultError = new SerialCommunicationException();
+        var messageError = new SerialCommunicationException("serial failed");
+
+        Assert.NotEmpty(defaultError.Message);
+        Assert.Equal("serial failed", messageError.Message);
+    }
 }
